@@ -1,0 +1,347 @@
+---
+title: "Medicine Mosaic"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+execute:
+  keep-md: true
+  df-print: paged
+  warning: false
+format:
+  html:
+    code-fold: true
+    code-line-numbers: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(plotly)
+library(RColorBrewer)
+```
+
+## Background
+
+My initial career aspiration was to become a pharmacist, and I pursued a major in biology during the first two years of my bachelor's degree. However, I soon realized that chemistry wasn't my strong suit. Nonetheless, my passion for pharmaceuticals and medicine continues to drive my curiosity. In an attempt to blend my interest in data analysis with pharmacy, I delved into a dataset containing information on thousands of medications. You can find the original dataset at: https://www.kaggle.com/datasets/singhnavjot2062001/11000-medicine-details. 
+The original dataset contained nine columns: Medicine Name (string), Composition (string), Uses (string), Side Effects (string), Image Url (string), Manufacturer (string), Excellent Review (numeric), Average Review (numeric), and Poor Review (numeric). After putting in a lot of effort, I managed to create useful charts from the data.
+
+```{r}
+drugs <- read_csv("C:\\Users\\derek\\OneDrive - BYU-Idaho\\Documents\\DS 350\\DS350_SP24_Doelling_Dere\\week_14\\medicine info.csv")
+```
+
+```{r}
+# Makes new composition columns
+
+split_composition <- function(df, column_to_split, separator) {
+  
+  max_compositions <- max(str_count(df[[column_to_split]], separator) + 1)
+  
+  
+  new_columns <- paste0("Composition_", seq_len(max_compositions))
+  
+  
+  df %>%
+    separate(column_to_split, into = new_columns, sep = separator, fill = "right", extra = "merge")
+
+}
+
+
+drugs1 <- split_composition(drugs, "Composition", "\\+")
+
+cols <- c("Composition_1", "Composition_2", "Composition_3", "Composition_4", "Composition_5", "Composition_6", "Composition_7", "Composition_8", "Composition_9")
+
+drugs1 <- drugs1 %>% 
+  mutate(across(all_of(cols), str_trim))
+
+drugs1$Composition_Count <- rowSums(!is.na(drugs1[cols]))
+```
+
+```{r}
+# Split into dosages
+
+split_dosage <- function(df, column_to_split, separator) {
+ 
+  df <- df %>%
+    separate(column_to_split, into = paste0(column_to_split, "_amount", seq_len(2)), sep = separator, remove = TRUE, fill = "right")
+  
+  return(df)
+}
+
+drugs2 <- split_dosage(drugs1, "Composition_1", "\\(") %>% 
+  rename("Composition_1" = "Composition_1_amount1", "Dosage_Amount_1" = "Composition_1_amount2") %>% 
+  mutate(Dosage_Amount_1 = str_replace_all(Dosage_Amount_1, "\\)", ""))
+
+drugs2 <- split_dosage(drugs2, "Composition_2", "\\(") %>% 
+  rename("Composition_2" = "Composition_2_amount1", "Dosage_Amount_2" = "Composition_2_amount2") %>% 
+  mutate(Dosage_Amount_2 = str_replace_all(Dosage_Amount_2, "\\)", ""))
+
+drugs2 <- split_dosage(drugs2, "Composition_3", "\\(") %>% 
+  rename("Composition_3" = "Composition_3_amount1", "Dosage_Amount_3" = "Composition_3_amount2") %>% 
+  mutate(Dosage_Amount_3 = str_replace_all(Dosage_Amount_3, "\\)", ""))
+
+drugs2 <- split_dosage(drugs2, "Composition_4", "\\(") %>% 
+  rename("Composition_4" = "Composition_4_amount1", "Dosage_Amount_4" = "Composition_4_amount2") %>% 
+  mutate(Dosage_Amount_4 = str_replace_all(Dosage_Amount_4, "\\)", ""))
+
+drugs2 <- split_dosage(drugs2, "Composition_5", "\\(") %>% 
+  rename("Composition_5" = "Composition_5_amount1", "Dosage_Amount_5" = "Composition_5_amount2") %>% 
+  mutate(Dosage_Amount_5 = str_replace_all(Dosage_Amount_5, "\\)", ""))
+
+drugs2 <- split_dosage(drugs2, "Composition_6", "\\(") %>% 
+  rename("Composition_6" = "Composition_6_amount1", "Dosage_Amount_6" = "Composition_6_amount2") %>% 
+  mutate(Dosage_Amount_6 = str_replace_all(Dosage_Amount_6, "\\)", ""))
+
+drugs2 <- split_dosage(drugs2, "Composition_7", "\\(") %>% 
+  rename("Composition_7" = "Composition_7_amount1", "Dosage_Amount_7" = "Composition_7_amount2") %>% 
+  mutate(Dosage_Amount_7 = str_replace_all(Dosage_Amount_7, "\\)", ""))
+
+drugs2 <- split_dosage(drugs2, "Composition_8", "\\(") %>% 
+  rename("Composition_8" = "Composition_8_amount1", "Dosage_Amount_8" = "Composition_8_amount2") %>% 
+  mutate(Dosage_Amount_8 = str_replace_all(Dosage_Amount_8, "\\)", ""))
+
+drugs2 <- split_dosage(drugs2, "Composition_9", "\\(") %>% 
+  rename("Composition_9" = "Composition_9_amount1", "Dosage_Amount_9" = "Composition_9_amount2") %>% 
+  mutate(Dosage_Amount_9 = str_replace_all(Dosage_Amount_9, "\\)", ""))
+```
+
+```{r}
+# Split dosage unit
+
+split_unit <- function(df, unit_column) {
+  number <- str_extract(unit_column, "\\d+$")  
+  new_column_name <- paste0('Dosage_Amount_', number)
+  units_column_name <- paste0('Units_', number)
+  
+  df <- df %>%
+    tidyr::separate(unit_column, into = c(new_column_name, units_column_name), sep = "(?<=\\d)(?=[%a-zA-Z])", extra = "merge")
+  
+  
+  df[[new_column_name]] <- as.numeric(df[[new_column_name]])
+  
+    df <- df %>%
+    mutate_all(~ifelse(. == "None", "None", .))
+  
+  return(df)
+}
+
+drugs3 <- split_unit(drugs2, "Dosage_Amount_1")
+drugs3 <- split_unit(drugs3, "Dosage_Amount_2")
+drugs3 <- split_unit(drugs3, "Dosage_Amount_3")
+drugs3 <- split_unit(drugs3, "Dosage_Amount_4")
+drugs3 <- split_unit(drugs3, "Dosage_Amount_5")
+drugs3 <- split_unit(drugs3, "Dosage_Amount_6")
+drugs3 <- split_unit(drugs3, "Dosage_Amount_7")
+drugs3 <- split_unit(drugs3, "Dosage_Amount_8")
+drugs3 <- split_unit(drugs3, "Dosage_Amount_9")
+```
+
+
+```{r}
+# Remove Treatment of and Prevention of
+
+split_treatment <- function(df, uses_column) {
+  df <- df %>%
+    mutate({{uses_column}} := str_replace_all({{uses_column}}, "Treatment of|Prevention of", "")) %>%
+    mutate({{uses_column}} := str_trim({{uses_column}}))
+}
+
+drugs4 <- split_treatment(drugs3, Uses)
+```
+
+
+```{r}
+# Separate into multiple uses and counts side effects
+
+drugs5 <- drugs4 %>% 
+  mutate(Treats = str_split(Uses, pattern="(?<=\\s)(?=[A-Z])"),
+         count_side_effects = str_count(Side_effects, pattern="(?<=\\s)(?=[A-Z])")+1) %>% 
+  unnest(Treats)
+```
+
+## Analysis
+
+### Chart 1
+
+```{r}
+graph <- drugs5 %>% 
+  distinct(`Medicine Name`, .keep_all = TRUE) %>% 
+  filter(`Poor Review %` == 100) %>% 
+  select(Manufacturer, `Poor Review %`) %>% 
+  group_by(Manufacturer) %>% 
+  mutate(bad_review = n()) %>% 
+  distinct(Manufacturer, .keep_all = TRUE) %>% 
+  arrange(desc(bad_review))
+
+graph <- graph[c(1, 2, 3, 4, 5), ] 
+
+graph <- graph  %>% 
+  mutate(Manufacturer = fct_reorder(Manufacturer, bad_review)) %>% 
+  select(-`Poor Review %`)
+```
+
+```{r}
+graph$highlight <- ifelse(graph$Manufacturer == "Intas Pharmaceuticals Ltd", "red", "darkgrey")
+
+ggplot(graph, aes(x=reorder(Manufacturer, bad_review), y=bad_review, fill=highlight)) +
+  geom_col() +
+  scale_fill_identity() +
+  coord_flip() +
+  labs(x = "", y="Number of Poor Products", title="Manufacturers with the Most Poor Rated Products", subtitle = "Intas Pharmaceuticals Ltd may produce many least favored medications") +
+  theme(plot.margin = unit(c(2,1,2,2), "lines"), 
+        plot.title = element_text(hjust = 0.5, vjust = 6, face = 'bold'), 
+        plot.subtitle = element_text(size = 10), 
+        panel.background = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        panel.grid.minor.y= element_blank(), 
+        axis.ticks.length.x = unit(0, 'pt'),  
+        axis.ticks.length.y = unit(0, 'pt'), 
+        axis.title.x = element_text(vjust = -3, size = 10))
+```
+
+According to the graph, it seems that Intas Pharmaceuticals Ltd may be producing the least popular medications in terms of customer satisfaction. This could potentially have a negative impact on their business, as customers are more likely to choose medications from other manufacturers. Consequently, Intas Pharmaceuticals Ltd could incur losses from producing drugs that may not sell well.
+
+
+### Chart 2
+
+```{r}
+graph1 <- drugs5 %>% 
+  filter(Units_1 == "mg", 
+         Treats == "Pain relief") %>% 
+  distinct(`Medicine Name`, .keep_all = TRUE) %>% 
+  select(Composition_1, Dosage_Amount_1, `Excellent Review %`) %>% 
+  mutate(Composition_1 = as_factor(Composition_1)) %>% 
+  filter(Composition_1 == "Etoricoxib ") %>% 
+  group_by(Dosage_Amount_1) %>% 
+  mutate(
+    avg_review = median(`Excellent Review %`), 
+    Dosage_Amount_1 = fct_reorder(as_factor(Dosage_Amount_1), avg_review))
+
+graph1 <- graph1[c(1, 3, 11), ] 
+```
+
+```{r}
+ggplot(graph1, aes(x = Dosage_Amount_1, y = avg_review)) +
+  geom_col() +
+  labs(x="Dosage Amount in mg", y = "Median Percentage of Excellent Reviews", title = "More the Merrier?", subtitle = "Comparing dosage amounts for Etoricoxib, a pain relief drug") +
+  theme(plot.margin = unit(c(2,1,2,2), "lines"), 
+        plot.title = element_text(hjust = 0.5, vjust = 6, face = 'bold'), 
+        panel.background = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        panel.grid.minor.y= element_blank(), 
+        axis.ticks.length.x = unit(0, 'pt'),  
+        axis.ticks.length.y = unit(0, 'pt'), 
+        axis.title.y = element_text(vjust= 6, size = 10), 
+        axis.title.x = element_text(vjust= -2, size = 10)) +
+  annotate("segment", x = "60", xend = "90", y = 40, yend = 55, colour = "red", size=1, alpha=1, arrow=arrow())
+```
+
+I wanted to investigate if higher dosages would yield better results. I calculated the median percentage of positive reviews for each available dosage of Etoricoxib, a pain relief medication. I chose Etoricoxib because it had a reasonable number of dosage options. Based on the graph, it appears that this is indeed the case, at least for Etoricoxib.
+
+
+### Chart 3
+
+```{r}
+graph2 <- drugs5 %>% 
+  mutate(
+    Treats = as_factor(Treats)) %>% 
+  group_by(Treats) %>% 
+  select(Treats, count_side_effects) %>% 
+  distinct(Treats, .keep_all = TRUE) %>% 
+  mutate(
+    Treats = str_to_lower(Treats))
+
+categorize_treats <- function(input) {
+  if (str_detect(input, "cancer")) {
+    return("Cancer Treatments") }
+  if (str_detect(input, "anxiety|depression|obsessive|bipolar|schizophrenia|mood|eating|traumatic")) {
+    return("Mental Health") }
+  if (str_detect(input, "heart|cholesterol|angina|hypotension|hypertension|cardiac")) {
+    return("Heart Related") }
+  if (str_detect(input, "bacteria|infection|viral|virus")) {
+    return("Bacterial/Viral") }
+  if (str_detect(input, "pain|inflammation|irritation|osteoporosis|vomit|headache|nausea|migraine|burn")) {
+    return("Antimetics/Pain") }
+  if (str_detect(input, "disease|disorder")) {
+    return("Disease Related/Disorder Related") }
+  else return("Other")
+}
+
+graph2$Treats <- sapply(graph2$Treats, categorize_treats)
+
+graph3 <- graph2 %>% 
+  mutate(
+    avg_sides = mean(count_side_effects), 
+    Treats = fct_reorder(Treats, avg_sides)) %>% 
+  distinct(Treats, .keep_all = TRUE)
+```
+
+```{r}
+ggplot(graph3, aes(reorder(x=Treats, avg_sides), y=avg_sides, fill=Treats)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_brewer(palette = "Spectral") +
+  labs(y="Average Number of Side Effects", x = "Medication Class", title="What Medication Class Causes the Most Side Effects?", subtitle="Mental health medications and cancer treatments have\n the most by far") +
+  theme(plot.margin = unit(c(2,1,2,2), "lines"), 
+        plot.title = element_text(hjust = 0.5, vjust = 6, face = 'bold'), 
+        legend.position = "none", 
+        panel.background = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        panel.grid.minor.y= element_blank(), 
+        axis.ticks.length.x = unit(0, 'pt'),  
+        axis.ticks.length.y = unit(0, 'pt'), 
+        axis.title.y = element_text(vjust= 6, size = 10), 
+        axis.title.x = element_text(vjust= -2, size = 10)) +
+  geom_hline(yintercept = 6.6, linetype="dashed", color='black')
+```
+
+It's noteworthy that medications for mental health conditions like anxiety, depression, and OCD, as well as cancer treatments, tend to cause almost double the amount of side effects compared to other types of drugs. This is likely because cancer treatments are usually more intensive and demanding, and targeting brain chemicals is not an easy task.
+
+
+### Chart 4
+
+```{r}
+graph4 <- drugs5 %>% 
+  distinct(`Medicine Name`, .keep_all = TRUE)
+
+graph4$average_rating <- (graph4$`Excellent Review %`* 3 + graph4$`Average Review %` * 2 + graph4$`Poor Review %`* 1) / 100
+
+graph4$Composition_1 <- replace_na(graph4$Composition_1, "None")
+graph4$Composition_2 <- replace_na(graph4$Composition_2, "None")
+graph4$Composition_3 <- replace_na(graph4$Composition_3, "None")
+graph4$Composition_4 <- replace_na(graph4$Composition_4, "None")
+graph4$Composition_5 <- replace_na(graph4$Composition_5, "None")
+graph4$Composition_6 <- replace_na(graph4$Composition_6, "None")
+graph4$Composition_7 <- replace_na(graph4$Composition_7, "None")
+graph4$Composition_8 <- replace_na(graph4$Composition_8, "None")
+graph4$Composition_9 <- replace_na(graph4$Composition_9, "None")
+
+fit <- lm(average_rating ~ Composition_Count, data = graph4)
+newdata <- data.frame(Composition_Count = range(graph4$Composition_Count))
+newdata$average_rating <- predict(fit, newdata)
+```
+
+```{r}
+chart <- ggplot(graph4, aes(x=Composition_Count, y=average_rating, text = paste("Medication:", `Medicine Name`, "\nUse:", Treats, "\nChemicals:", Composition_1, Composition_2, Composition_3, Composition_4, Composition_5, Composition_6, Composition_7, Composition_8, Composition_9))) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(x="Number of Chemical Compositions", y = "Average Rating", title = "More Chemicals the Better") +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9)) +
+  theme(plot.margin = unit(c(2,1,2,2), "lines"), 
+        plot.title = element_text(hjust = 0.5, vjust = 6, face = 'bold'), 
+        legend.position = "none", 
+        panel.background = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        panel.grid.minor.y= element_blank(), 
+        axis.ticks.length.x = unit(0, 'pt'),  
+        axis.ticks.length.y = unit(0, 'pt'), 
+        axis.title.y = element_text(vjust= 6, size = 10), 
+        axis.title.x = element_text(vjust= -2, size = 10))
+
+chart <- ggplotly(chart)
+chart <- chart %>% add_lines(x = ~Composition_Count, y = ~average_rating, data = newdata)
+
+chart
+```
+
+I conducted a study to investigate whether including more chemical compositions in a medication leads to higher customer satisfaction. I analyzed the average rating for each medication based on three review categories: excellent, average, and poor. To calculate the average rating, I multiplied the number of excellent reviews by 3, average reviews by 2, and poor reviews by 1. Then, I added these three numbers together and divided the sum by 100. After reviewing the data, it appears that, in general, medications with more chemical compositions tend to have slightly higher levels of customer satisfaction. One potential explanation for the increased customer satisfaction is that the additional chemicals may serve to stabilize the others or prevent them from producing adverse effects. However, it's important to note that there are only a few medications with more than 5 chemicals compared to those with less than 5, which could be influencing the data.   
