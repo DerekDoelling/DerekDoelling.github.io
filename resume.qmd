@@ -3,7 +3,7 @@ layout: cv
 title: Derek Doelling's Resume
 ---
 # Derek Doelling
-Data Scientist, Data Engineer, Data Analyst
+Data Scientist and Data Analyst
 
 <div id="webaddress">
 <a href="www.linkedin.com/in/derek-doelling-b402b2306">Linkedin Profile</a>
