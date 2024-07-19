@@ -13,7 +13,7 @@ website:
     left: "Derek Doelling 2024©"
     right: 
       - icon: linkedin
-        href: Your_LinkedIn_URL
+        href: www.linkedin.com/in/derek-doelling-b402b2306
 
   navbar:
     background: primary
