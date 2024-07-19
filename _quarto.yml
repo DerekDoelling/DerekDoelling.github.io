@@ -70,7 +70,7 @@ website:
           file: exploration.qmd
         - text: "---"
         - text: "Project 1"
-          file: Exploration_Projects/project1.qmd
+          file: Exploration_Projects/IBCspring.qmd
         - text: "---"
         - text: "Project 2"
           file: Exploration_Projects/project2.qmd
