@@ -1,0 +1,9 @@
+sample ,group
+control 1,healthy
+control 2,healthy
+hht 1 .1,disease
+hht 1.2,disease
+hht 2.1,disease
+hht 2.2,disease
+hht 3.1,disease
+hht 3.2,disease
