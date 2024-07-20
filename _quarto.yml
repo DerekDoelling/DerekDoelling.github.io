@@ -58,7 +58,7 @@ website:
           file: dataexploration.qmd
         - text: "---"
         - text: "Project 1"
-          file: Cleansing_Exploration/project1.qmd
+          file: Cleansing_Exploration/rnaseq.qmd
         - text: "---"
     - title: "Story Telling"
       style: "docked"
