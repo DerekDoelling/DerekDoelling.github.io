@@ -54,8 +54,8 @@ website:
       style: "docked"
       background: light
       contents:
-- text: "Data Exploration"
-  file: exploration.qmd
+  - text: "Data Exploration"
+    file: exploration.qmd
 - text: "---"
 - text: "Business Analysis"
   file: Exploration_Projects/IBCspring.html.md
