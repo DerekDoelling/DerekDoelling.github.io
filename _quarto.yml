@@ -54,18 +54,11 @@ website:
       style: "docked"
       background: light
       contents:
-  - text: "Data Exploration"
-    file: exploration.qmd
-- text: "---"
-- text: "Business Analysis"
-  file: Exploration_Projects/IBCspring.html.md
-- text: "---"
-- text: "RNA Sequence Analysis"
-  file: Exploration_Projects/rnaseq.html.md
-- text: "---"
-- text: "Medicine Mosaic"
-  file: Exploration_Projects/Project.html.md
-
+        - text: "Data Exploration"
+          file: dataexploration.qmd
+        - text: "---"
+        - text: "Project 1"
+          file: Cleansing_Exploration/project1.qmd
         - text: "---"
     - title: "Story Telling"
       style: "docked"
