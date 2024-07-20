@@ -13,7 +13,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r}
+```{r, warning=FALSE}
 library(tidyverse)
 library(rhdf5)
 library(tximport) 
@@ -38,6 +38,7 @@ library(msigdbr)
 library(enrichplot)
 library(EnsDb.Hsapiens.v86)
 library(GSVA)
+library(ggforce)
 ```
 
 ## Introduction 
@@ -56,10 +57,10 @@ RNA was extracted from multiple samples of BOECs from both healthy and HHT patie
 
 ### Load in the Data
 
-```{r}
-targets <- read_csv("studydesign.csv")
+```{r, warning=FALSE, message=FALSE}
+targets <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\studydesign.csv")
 
-counts <- read_csv("Data.csv")
+counts <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\Data.csv")
 
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("gene_id", "gene_name"))
 
@@ -89,7 +90,7 @@ data$`hht 3.2` <- as.numeric(data$`hht 3.2`)
 
 ## Data Wrangling
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 a <- data %>% 
   select(-`Ensembl Transcript ID`)
 
@@ -188,7 +189,7 @@ plot_grid(p1, p2, p3, labels = c('A', 'B', 'C'), label_size = 12)
 
 ## Data Exploration 
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 group <- targets$group
 group <- factor(group)
 
@@ -202,8 +203,7 @@ pca.plot <- ggplot(pca.res.df) +
   stat_ellipse() +
   xlab(paste0("PC1 (",pc.per[1],"%",")")) + 
   ylab(paste0("PC2 (",pc.per[2],"%",")")) +
-  labs(title="PCA plot",
-       caption=paste0("produced on ", Sys.time())) +
+  labs(title="PCA plot") +
   coord_fixed() +
   theme_bw()
 
@@ -258,12 +258,11 @@ pca.res.df <- as_tibble(pca.res$x)
 ggplot(pca.res.df) +
   aes(x=PC2, y=PC3, label=sampleLabels) +
   geom_point(size=4) +
-  #geom_label() +
+  geom_label() +
   stat_ellipse() +
   xlab(paste0("PC2 (",pc.per[1],"%",")")) + 
   ylab(paste0("PC3 (",pc.per[2],"%",")")) +
-  labs(title="PCA plot",
-       caption=paste0("produced on ", Sys.time())) +
+  labs(title="PCA plot") +
   coord_fixed() +
   theme_bw()
 
@@ -315,18 +314,24 @@ myplot <- ggplot(mydata.df) +
   aes(x=healthy.AVG, y=disease.AVG, 
      text = paste("Symbol:", geneID)) +
   geom_point(shape=16, size=1) +
-  ggtitle("disease vs. healthy") +
-  theme_bw() #+
+  ggtitle("Disease vs. Healthy") +
+  theme_bw()
   #annotate('text', x = 6, y = -4, label = 'SMAD4', size = 3, color = 'red') +
   #annotate('text', x = 7, y = -3, label = 'ENG', size = 3, color = 'red') +
   #annotate('text', x = 9, y = -4, label = 'ACVRL1', size = 3, color = 'red')
 #myplot
-ggplotly(myplot)
+myplotly <- ggplotly(myplot)
+
+myplot_plotly <- add_trace(myplotly, x = ~c(6, 9.3, 9.3, 6),  # x-coordinates of the circle
+  y = ~c(-4, -4, -2.5, -2.5),  # y-coordinates of the circle
+  fill = "none",  # fill the circle
+  mode = "lines")
+myplot_plotly
 ```
 
 ## Differential Gene Expression
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 group <- factor(targets$group)
 design <- model.matrix(~0 + group)
 colnames(design) <- levels(group)
@@ -348,24 +353,37 @@ vplot <- ggplot(myTopHits.df) +
   geom_hline(yintercept = -log10(0.01), linetype="longdash", colour="grey", linewidth=1) +
   geom_vline(xintercept = 1, linetype="longdash", colour="#BE684D", linewidth=1) +
   geom_vline(xintercept = -1, linetype="longdash", colour="#2C467A", linewidth=1) +
- # annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
-#  annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
-  labs(title="Volcano plot",
-       subtitle = "Cutaneous leishmaniasis",
-       caption=paste0("produced on ", Sys.time())) +
+  annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
+  annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
+  labs(title="Volcano plot") +
   theme_bw()
 
 ggplotly(vplot)
 
+vplot <- ggplot(myTopHits.df) +
+  aes(y=-log10(adj.P.Val), x=logFC, text = paste("Symbol:", geneID)) +
+  geom_point(size=2) +
+  geom_hline(yintercept = -log10(0.01), linetype="longdash", colour="grey", linewidth=1) +
+  geom_vline(xintercept = 1, linetype="longdash", colour="#BE684D", linewidth=1) +
+  geom_vline(xintercept = -1, linetype="longdash", colour="#2C467A", linewidth=1) +
+  #annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
+  #annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
+  labs(title="Volcano plot") +
+  theme_bw()
+
+ggplotly(vplot)
+```
+
+```{r, warning=FALSE, message=FALSE}
 results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.05, lfc=1)
 colnames(v.DEGList.filtered.norm$E) <- sampleLabels
 diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
 diffGenes.df <- as_tibble(diffGenes, rownames = "geneID")
-datatable(diffGenes.df,
-          extensions = c('KeyTable', "FixedHeader"),
-          caption = 'Table 1: DEGs in hereditary hemorrhagic telangiectasia',
-          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
-  formatRound(columns=c(2:11), digits=2)
+#datatable(diffGenes.df,
+          #extensions = c('KeyTable', "FixedHeader"),
+          #caption = 'Table 1: DEGs in hereditary hemorrhagic telangiectasia',
+          #options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
+  #formatRound(columns=c(2:11), digits=2)
 
 group <- factor(targets$group)
 design <- model.matrix(~0 + group)
@@ -389,25 +407,11 @@ myTopHits.df <- myTopHits %>%
 
 #gt(myTopHits.df)
 
-vplot <- ggplot(myTopHits.df) +
-  aes(y=-log10(adj.P.Val), x=logFC, text = paste("Symbol:", geneID)) +
-  geom_point(size=2) +
-  geom_hline(yintercept = -log10(0.01), linetype="longdash", colour="grey", linewidth=1) +
-  geom_vline(xintercept = 1, linetype="longdash", colour="#BE684D", linewidth=1) +
-  geom_vline(xintercept = -1, linetype="longdash", colour="#2C467A", linewidth=1) +
-  #annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
-  #annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
-  labs(title="Volcano plot",
-       subtitle = "Cutaneous leishmaniasis",
-       caption=paste0("produced on ", Sys.time())) +
-  theme_bw()
-
-ggplotly(vplot)
-
 results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01, lfc=1)
 
-head(results)
+#head(results)
 summary(results)
+
 vennDiagram(results, include="up")
 
 head(v.DEGList.filtered.norm$E)
@@ -435,7 +439,7 @@ targets.mod <- targets %>%
 
 ## Module Identification
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 myheatcolors <- rev(brewer.pal(name="RdBu", n=11))
 myotherheatcolors <- rev(brewer.pal(name="Spectral", n=11))
 clustRows <- hclust(as.dist(1-cor(t(diffGenes), method="pearson")), method="complete") 
@@ -483,7 +487,7 @@ myheatcolors3 <- c("#fed976", "#268f9c")
 results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01, lfc=1)
 colnames(v.DEGList.filtered.norm$E) <- sampleLabels
 diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
-dim(diffGenes)
+#dim(diffGenes)
 clustRows <- hclust(as.dist(1-cor(t(diffGenes), method="pearson")), method="complete") 
 clustColumns <- hclust(as.dist(1-cor(diffGenes, method="spearman")), method="complete") 
 module.assign <- cutree(clustRows, k=2)
@@ -523,7 +527,8 @@ module.assign.pivot <- module.assign.pivot %>%
 ggplot(module.assign.pivot) +
   aes(module) +
   geom_bar(aes(fill=moduleColor)) +
-  theme_bw()
+  theme_bw() +
+  theme(legend.position = "none")
 
 modulePick <- 2
 myModule <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
@@ -545,21 +550,23 @@ write_tsv(moduleData.df,"module_upRegulated.tsv")
 
 ## Functional Enrichment Analysis
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 myTopHits <- topTable(ebFit, adjust ="BH", coef=1, number=100, sort.by="AveExpr")
+
 gost.res <- gost(rownames(myTopHits), organism = "hsapiens", correction_method = "fdr")
+
 gostplot(gost.res, interactive = TRUE, capped = TRUE)
+
 mygostplot <- gostplot(gost.res, interactive = FALSE, capped = TRUE)
 
-publish_gostplot(
-  mygostplot, 
-  highlight_terms = c("REAC:R-HSA-9662851", "REAC:R-HSA-9824443", "REAC:R-HSA-9664407", "REAC:R-HSA-9658195", "REAC:R-HSA-9664417"),
-  filename = NULL,
-  width = NA,
-  height = NA)
+#publish_gostplot(
+  #mygostplot, 
+  #highlight_terms = c("REAC:R-HSA-9662851", "REAC:R-HSA-9824443", "REAC:R-HSA-9664407", "REAC:R-HSA-9658195", "REAC:R-HSA-9664417"),
+  #filename = NULL,
+  #width = NA,
+  #height = NA)
 
-C2CP <- read.gmt("c2.all.v2023.2.Hs.symbols.gmt")
-C2CP <- read.gmt("C:\\Users\\derek\\OneDrive - BYU-Idaho\\Documents\\Bio 382\\Bio 382 Explorations\\HHT\\c2.all.v2023.2.Hs.symbols.gmt")
+C2CP <- read.gmt("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\c2.all.v2023.2.Hs.symbols.gmt")
 
 mydata.df.sub <- dplyr::select(mydata.df, geneID, LogFC)
 
@@ -599,11 +606,11 @@ collection <- list(real = mySig, fake = mySig2)
 
 camera.res <- camera(v.DEGList.filtered.norm$E, collection, design, contrast.matrix[,1])
 camera.df <- as_tibble(camera.res, rownames = "setName")
-camera.df
+#camera.df
 
 mroast(v.DEGList.filtered.norm$E, collection, design, contrast=1)
 
-C2CP <- getGmt("C:\\Users\\derek\\OneDrive - BYU-Idaho\\Documents\\Bio 382\\Bio 382 Explorations\\HHT\\c2.all.v2023.2.Hs.symbols.gmt", geneIdType=SymbolIdentifier())
+C2CP <- getGmt("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\c2.all.v2023.2.Hs.symbols.gmt", geneIdType=SymbolIdentifier())
 
 C2CP <- geneIds(C2CP)
 camera.res <- camera(v.DEGList.filtered.norm$E, C2CP, design, contrast.matrix[,1])
@@ -632,34 +639,82 @@ gsvapar <- gsvaParam(exprData = v.DEGList.filtered.norm$E,
                      minSize=5, maxSize=500,
                      maxDiff=TRUE)
 
-GSVA.res.C2CP <- gsva(gsvapar)
+#GSVA.res.C2CP <- gsva(gsvapar)
 
-fit.C2CP <- lmFit(GSVA.res.C2CP, design)
-ebFit.C2CP <- eBayes(fit.C2CP)
+#fit.C2CP <- lmFit(GSVA.res.C2CP, design)
+#ebFit.C2CP <- eBayes(fit.C2CP)
 
-topPaths.C2CP <- topTable(ebFit.C2CP, adjust ="BH", coef=1, number=50, sort.by="logFC")
-res.C2CP <- decideTests(ebFit.C2CP, method="global", adjust.method="BH", p.value=0.05, lfc=0.5)
+#topPaths.C2CP <- topTable(ebFit.C2CP, adjust ="BH", coef=1, number=50, sort.by="logFC")
+#res.C2CP <- decideTests(ebFit.C2CP, method="global", adjust.method="BH", p.value=0.05, lfc=0.5)
 
-summary(res.C2CP)
+#summary(res.C2CP)
 
-diffSets.C2CP <- GSVA.res.C2CP[res.C2CP[,1] !=0,]
-head(diffSets.C2CP)
-dim(diffSets.C2CP)
+#diffSets.C2CP <- GSVA.res.C2CP[res.C2CP[,1] !=0,]
+#head(diffSets.C2CP)
+#dim(diffSets.C2CP)
 
-hr.C2CP <- hclust(as.dist(1-cor(t(diffSets.C2CP), method="pearson")), method="complete") 
-hc.C2CP <- hclust(as.dist(1-cor(diffSets.C2CP, method="spearman")), method="complete") 
+#hr.C2CP <- hclust(as.dist(1-cor(t(diffSets.C2CP), method="pearson")), method="complete") 
+#hc.C2CP <- hclust(as.dist(1-cor(diffSets.C2CP, method="spearman")), method="complete") 
 
-mycl.C2CP <- cutree(hr.C2CP, k=2)
-mycolhc.C2CP <- rainbow(length(unique(mycl.C2CP)), start=0.1, end=0.9)
-mycolhc.C2CP <- mycolhc.C2CP[as.vector(mycl.C2CP)]
+#mycl.C2CP <- cutree(hr.C2CP, k=2)
+#mycolhc.C2CP <- rainbow(length(unique(mycl.C2CP)), start=0.1, end=0.9)
+#mycolhc.C2CP <- mycolhc.C2CP[as.vector(mycl.C2CP)]
 
-myheatcol <- colorRampPalette(colors=c("yellow","white","blue"))(100)
+#myheatcol <- colorRampPalette(colors=c("yellow","white","blue"))(100)
 
-heatmap.2(diffSets.C2CP,
-          Rowv=as.dendrogram(hr.C2CP),
-          Colv=NA,
-          col=myheatcol, scale="row",
-          density.info="none", trace="none",
-          cexRow=0.9, cexCol=1, margins=c(10,14))
+#heatmap.2(diffSets.C2CP,
+          #Rowv=as.dendrogram(hr.C2CP),
+          #Colv=NA,
+          #col=myheatcol, scale="row",
+          #density.info="none", trace="none",
+          #cexRow=0.9, cexCol=1, margins=c(10,14))
 ```
+
+## Findings 
+
+In our research, we discovered that SMAD4, ENG, and ACVRL1 are the genes that exhibit the most variation in their number of transcriptions between healthy patients and patients with HHT. Further investigation revealed that these three genes are part of a single pathway known as the transforming growth factor beta (TGF-β) signaling pathway. Initially thought to promote cell growth like other growth factors, it was later understood that the transforming growth factor serves as a dual-purpose regulator that can either impede or promote cell proliferation (growth and division).
+
+![](HHT 3.png)
+
+### SMAD4
+
+The human SMAD4 (MADH4) plays a key role in transmitting signals from the TGF-beta group of cytokines. When components of the Smad signaling pathway are mutated or deleted, certain human tumors can resist the growth-suppressing signals of TGF-beta or similar substances.
+
+### ENG
+
+ENG, also known as endoglin, is expressed in blood vessels and plays key roles in cell proliferation, migration, and capillary formation.
+
+### ACVRL1
+
+ACVRL1 is responsible for producing a type I cell-surface receptor that interacts with the TGF-beta superfamily of ligands. Through the signaling receptor ACVRL1, ENG can promote the TGFβ family signaling.
+
+## Conclusion 
+
+According to the analysis of this RNA sequence, it is evident that alterations in the transcription levels of SMAD4, endoglin, and ACVRL1 may lead to abnormalities in blood vessel formation in the human body, increasing the susceptibility to hemorrhag since  these three genes are primarily involved in cell proliferation, especially in endothelial cells.
+
+
+### References 
+
+Rossi, Elisa, et al. “Endoglin as an Adhesion Molecule in Mature and Progenitor Endothelial Cells: A Function beyond TGF-β.” Frontiers, Frontiers, 14 Jan. 2019, www.frontiersin.org/articles/10.3389/fmed.2019.00010/full.
+
+Gariballa, N., Badawi, S., & Ali, B. R. (2024). Endoglin mutants retained in the endoplasmic reticulum exacerbate loss of function in hereditary hemorrhagic telangiectasia type 1 (HHT1) by exerting dominant negative effects on the wild type allele. Traffic, 25(1). https://doi.org/10.1111/tra.12928 
+Jones, J. B., & Kern, S. E. (2000). Functional mapping of the MH1 DNA-binding domain of DPC4/SMAD4. Nucleic acids research, 28(12), 2363–2368. https://doi.org/10.1093/nar/28.12.2363
+
+de Caestecker, M. P., Hemmati, P., Larisch-Bloch, S., Ajmera, R., Roberts, A. B., & Lechleider, R. J. (1997). Characterization of functional domains within Smad4/DPC4. The Journal of biological chemistry, 272(21), 13690–13696. https://doi.org/10.1074/jbc.272.21.13690
+
+Wan, R., Feng, J., & Tang, L. (2021). Consequences of Mutations and Abnormal Expression of SMAD4 in Tumors and T Cells. OncoTargets and therapy, 14, 2531–2540. https://doi.org/10.2147/OTT.S297855
+
+Kuang, C., & Chen, Y. (2004). Tumor-derived C-terminal mutations of Smad4 with decreased DNA binding activity and enhanced intramolecular interaction. Oncogene, 23(5), 1021–1029. https://doi.org/10.1038/sj.onc.1207219
+
+Shovlin, C. L., Hughes, J. M. B., Scott, J., Seidman, C. E., & Seidman, J. G. (1997). Characterization of endoglin and identification of novel mutations in Hereditary hemorrhagic telangiectasia. The American Journal of Human Genetics, 61(1), 68–79. https://doi.org/10.1086/513906 
+
+Zhao, M., Mishra, L., Deng, C.X. (2018). The role of TGF-β/SMAD4 signaling in cancer. International Journal of Biological Sciences, 14(2), 111-123. https://doi.org/10.7150/ijbs.23230.
+
+Errasti Díaz, S., Peñalva, M., Recio-Poveda, L., Vilches, S., Casado-Vela, J., Pérez Pérez, J., Botella, L. M., Albiñana, V., & Cuesta, A. M. (2022). A Novel Splicing Mutation in the ACVRL1/ALK1 Gene as a Cause of HHT2. Journal of clinical medicine, 11(11), 3053. https://doi.org/10.3390/jcm11113053
+
+Kritharis, Athena, Hanny Al-Samkari, and David J. Kuter. "Hereditary hemorrhagic telangiectasia: diagnosis and management from the hematologist’s perspective." Haematologica 103.9 (2018): 1433.
+
+Chaudhury, A., & Howe, P. H. (2009). The tale of transforming growth factor-beta (TGFbeta) signaling: a soigné enigma. IUBMB life, 61(10), 929–939. https://doi.org/10.1002/iub.239
+
+Chin, D., Boyle, G. M., Parsons, P. G., & Coman, W. B. (2004). What is transforming growth factor-beta (TGF-beta)?. British journal of plastic surgery, 57(3), 215–221. https://doi.org/10.1016/j.bjps.2003.12.012
 

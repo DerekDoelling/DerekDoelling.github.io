@@ -1,5 +1,5 @@
 ---
-title: "IBC Spring 2024 Analysis"
+title: "IBC Analysis"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 execute:
   keep-md: true
@@ -57,6 +57,8 @@ ibc_year <- ibc %>%
 ```
 
 ## Background
+
+At Brigham Young University-Idaho, IBC is a program where students run their own businesses on campus with a loan from the university. The professor in charge of IBC has requested an analysis of data from the past couple of years. Specifically, he wants to know which businesses perform the best, whether the semester influences business success, and if female students have a positive impact on the businesses.
 
 In the context of this statistical examination, we have set the threshold for statistical significance at an alpha level of 0.1. Upon conducting individual ANOVA analyses, we observe that the residuals versus fitted values plot demonstrates a consistent variance across each vertical cluster of data points. This is indicative of the homoscedasticity assumption being reasonably satisfied.
 
