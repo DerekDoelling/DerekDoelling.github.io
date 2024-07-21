@@ -60,6 +60,9 @@ website:
         - text: "Project 1"
           file: Cleansing_Exploration/rnaseq.qmd
         - text: "---"
+        - text: "Project 2"
+          file: Cleansing_Exploration/IBCspring.qmd
+        - text: "---"
     - title: "Story Telling"
       style: "docked"
       background: light

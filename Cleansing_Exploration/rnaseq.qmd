@@ -41,26 +41,23 @@ library(GSVA)
 library(ggforce)
 ```
 
-## Introduction 
+## Introduction
 
-We will be analyzing Hereditary Hemorrhagic Telangiectasia Syndrome or HHT RNA-seq data. HHT patients develop arteriovenous malformations (AVMs) known as telangiectasia in the nose, mouth, and gastrointestinal tract. The telangiectasia are comprised of fragile vessels that are susceptible to rupture and hemorrhage, which can cause nosebleeds or more serious symptoms depending on the location. It is prevalent in one case per 5,000–8,000 individuals
-![](hht image.webp)   
-![](hht image2.jpg)
-We want to find which specific genes contribute to the development of HHT and what roles do they play? The following links are to the [research paper](https://www.biorxiv.org/content/10.1101/2021.12.05.471269v2.full) and the [dataset](https://zenodo.org/records/5201823) used in this analysis.
+We will be analyzing Hereditary Hemorrhagic Telangiectasia Syndrome or HHT RNA-seq data. HHT patients develop arteriovenous malformations (AVMs) known as telangiectasia in the nose, mouth, and gastrointestinal tract. The telangiectasia are comprised of fragile vessels that are susceptible to rupture and hemorrhage, which can cause nosebleeds or more serious symptoms depending on the location. It is prevalent in one case per 5,000–8,000 individuals ![](images/hht image.webp)\
+![](images/hht image2.jpg) We want to find which specific genes contribute to the development of HHT and what roles do they play? The following links are to the [research paper](https://www.biorxiv.org/content/10.1101/2021.12.05.471269v2.full) and the [dataset](https://zenodo.org/records/5201823) used in this analysis.
 
 This research project aims to improve the studying of rare diseases, such as hereditary hemorrhagic telangiectasia (HHT), using cells derived from patients. The researchers focused on understanding how cells respond to specific genetic mutations called premature termination codons (PTCs).
 
-The study involved obtaining blood outgrowth endothelial cells (BOECs) from two healthy patients (control group) and two pre-genotyped HHT patients (experimental group). 
+The study involved obtaining blood outgrowth endothelial cells (BOECs) from two healthy patients (control group) and two pre-genotyped HHT patients (experimental group).
 
 RNA was extracted from multiple samples of BOECs from both healthy and HHT patients. These cells were then grown under two different conditions: with and without a specific growth factor. In total, there were two control/healthy groups and six experimental/disease groups.
-
 
 ### Load in the Data
 
 ```{r, warning=FALSE, message=FALSE}
-targets <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\studydesign.csv")
+targets <- read_csv("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/studydesign.csv")
 
-counts <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\Data.csv")
+counts <- read_csv("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/Data.csv")
 
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("gene_id", "gene_name"))
 
@@ -186,8 +183,7 @@ p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
 plot_grid(p1, p2, p3, labels = c('A', 'B', 'C'), label_size = 12)
 ```
 
-
-## Data Exploration 
+## Data Exploration
 
 ```{r, warning=FALSE, message=FALSE}
 group <- targets$group
@@ -436,7 +432,6 @@ targets.mod <- targets %>%
   dplyr::select(sampleID, condition)
 ```
 
-
 ## Module Identification
 
 ```{r, warning=FALSE, message=FALSE}
@@ -566,7 +561,7 @@ mygostplot <- gostplot(gost.res, interactive = FALSE, capped = TRUE)
   #width = NA,
   #height = NA)
 
-C2CP <- read.gmt("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\c2.all.v2023.2.Hs.symbols.gmt")
+C2CP <- read.gmt("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/c2.all.v2023.2.Hs.symbols.gmt")
 
 mydata.df.sub <- dplyr::select(mydata.df, geneID, LogFC)
 
@@ -610,7 +605,7 @@ camera.df <- as_tibble(camera.res, rownames = "setName")
 
 mroast(v.DEGList.filtered.norm$E, collection, design, contrast=1)
 
-C2CP <- getGmt("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\c2.all.v2023.2.Hs.symbols.gmt", geneIdType=SymbolIdentifier())
+C2CP <- getGmt("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/c2.all.v2023.2.Hs.symbols.gmt", geneIdType=SymbolIdentifier())
 
 C2CP <- geneIds(C2CP)
 camera.res <- camera(v.DEGList.filtered.norm$E, C2CP, design, contrast.matrix[,1])
@@ -670,11 +665,11 @@ gsvapar <- gsvaParam(exprData = v.DEGList.filtered.norm$E,
           #cexRow=0.9, cexCol=1, margins=c(10,14))
 ```
 
-## Findings 
+## Findings
 
 In our research, we discovered that SMAD4, ENG, and ACVRL1 are the genes that exhibit the most variation in their number of transcriptions between healthy patients and patients with HHT. Further investigation revealed that these three genes are part of a single pathway known as the transforming growth factor beta (TGF-β) signaling pathway. Initially thought to promote cell growth like other growth factors, it was later understood that the transforming growth factor serves as a dual-purpose regulator that can either impede or promote cell proliferation (growth and division).
 
-![](HHT 3.png)
+![](images/HHT 3.png)
 
 ### SMAD4
 
@@ -688,17 +683,15 @@ ENG, also known as endoglin, is expressed in blood vessels and plays key roles i
 
 ACVRL1 is responsible for producing a type I cell-surface receptor that interacts with the TGF-beta superfamily of ligands. Through the signaling receptor ACVRL1, ENG can promote the TGFβ family signaling.
 
-## Conclusion 
+## Conclusion
 
-According to the analysis of this RNA sequence, it is evident that alterations in the transcription levels of SMAD4, endoglin, and ACVRL1 may lead to abnormalities in blood vessel formation in the human body, increasing the susceptibility to hemorrhag since  these three genes are primarily involved in cell proliferation, especially in endothelial cells.
+According to the analysis of this RNA sequence, it is evident that alterations in the transcription levels of SMAD4, endoglin, and ACVRL1 may lead to abnormalities in blood vessel formation in the human body, increasing the susceptibility to hemorrhag since these three genes are primarily involved in cell proliferation, especially in endothelial cells.
 
-
-### References 
+### References
 
 Rossi, Elisa, et al. “Endoglin as an Adhesion Molecule in Mature and Progenitor Endothelial Cells: A Function beyond TGF-β.” Frontiers, Frontiers, 14 Jan. 2019, www.frontiersin.org/articles/10.3389/fmed.2019.00010/full.
 
-Gariballa, N., Badawi, S., & Ali, B. R. (2024). Endoglin mutants retained in the endoplasmic reticulum exacerbate loss of function in hereditary hemorrhagic telangiectasia type 1 (HHT1) by exerting dominant negative effects on the wild type allele. Traffic, 25(1). https://doi.org/10.1111/tra.12928 
-Jones, J. B., & Kern, S. E. (2000). Functional mapping of the MH1 DNA-binding domain of DPC4/SMAD4. Nucleic acids research, 28(12), 2363–2368. https://doi.org/10.1093/nar/28.12.2363
+Gariballa, N., Badawi, S., & Ali, B. R. (2024). Endoglin mutants retained in the endoplasmic reticulum exacerbate loss of function in hereditary hemorrhagic telangiectasia type 1 (HHT1) by exerting dominant negative effects on the wild type allele. Traffic, 25(1). https://doi.org/10.1111/tra.12928 Jones, J. B., & Kern, S. E. (2000). Functional mapping of the MH1 DNA-binding domain of DPC4/SMAD4. Nucleic acids research, 28(12), 2363–2368. https://doi.org/10.1093/nar/28.12.2363
 
 de Caestecker, M. P., Hemmati, P., Larisch-Bloch, S., Ajmera, R., Roberts, A. B., & Lechleider, R. J. (1997). Characterization of functional domains within Smad4/DPC4. The Journal of biological chemistry, 272(21), 13690–13696. https://doi.org/10.1074/jbc.272.21.13690
 
@@ -706,7 +699,7 @@ Wan, R., Feng, J., & Tang, L. (2021). Consequences of Mutations and Abnormal Exp
 
 Kuang, C., & Chen, Y. (2004). Tumor-derived C-terminal mutations of Smad4 with decreased DNA binding activity and enhanced intramolecular interaction. Oncogene, 23(5), 1021–1029. https://doi.org/10.1038/sj.onc.1207219
 
-Shovlin, C. L., Hughes, J. M. B., Scott, J., Seidman, C. E., & Seidman, J. G. (1997). Characterization of endoglin and identification of novel mutations in Hereditary hemorrhagic telangiectasia. The American Journal of Human Genetics, 61(1), 68–79. https://doi.org/10.1086/513906 
+Shovlin, C. L., Hughes, J. M. B., Scott, J., Seidman, C. E., & Seidman, J. G. (1997). Characterization of endoglin and identification of novel mutations in Hereditary hemorrhagic telangiectasia. The American Journal of Human Genetics, 61(1), 68–79. https://doi.org/10.1086/513906
 
 Zhao, M., Mishra, L., Deng, C.X. (2018). The role of TGF-β/SMAD4 signaling in cancer. International Journal of Biological Sciences, 14(2), 111-123. https://doi.org/10.7150/ijbs.23230.
 
@@ -717,4 +710,3 @@ Kritharis, Athena, Hanny Al-Samkari, and David J. Kuter. "Hereditary hemorrhagic
 Chaudhury, A., & Howe, P. H. (2009). The tale of transforming growth factor-beta (TGFbeta) signaling: a soigné enigma. IUBMB life, 61(10), 929–939. https://doi.org/10.1002/iub.239
 
 Chin, D., Boyle, G. M., Parsons, P. G., & Coman, W. B. (2004). What is transforming growth factor-beta (TGF-beta)?. British journal of plastic surgery, 57(3), 215–221. https://doi.org/10.1016/j.bjps.2003.12.012
-
