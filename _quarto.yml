@@ -71,7 +71,7 @@ website:
           file: story_telling.qmd
         - text: "---"
         - text: "Project 1"
-          file: Story_Telling/project1.qmd
+          file: Story_Telling/Project.qmd
         - text: "---"
     - title: "Machine Learning"
       style: "docked"
