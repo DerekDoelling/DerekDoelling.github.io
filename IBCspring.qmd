@@ -224,9 +224,9 @@ chart6
 According to the linear model, there appears to be a positive correlation between the investment in goods and the subsequent returns. Notably, ‘43 North’ and ‘Wing Shack’ emerge as outliers in this analysis. As most companies tend to maintain low Cost of Goods Sold (COGS), our dataset is somewhat limited in terms of businesses with high COGS. However, within the scope of the available data, we can discern a significant relationship between the cost of goods sold and net income.
 
 ```{r}
-people <- read_csv("C:\\Users\\derek\\Downloads\\registration_cleaned_sp22_f23_joined_with_business_name (2).csv")
+people <- read_csv("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/registration_cleaned_sp22_f23_joined_with_business_name%20(2).csv")
 
-businesses <- read_csv("C:\\Users\\derek\\Downloads\\IBC Historical Data.csv")
+businesses <- read_csv("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/IBC%20Historical%20Data.csv")
 
 people <- people %>% 
   drop_na("Business me")
