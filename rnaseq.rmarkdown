@@ -1,0 +1,748 @@
+---
+title: "RNA Sequence Analysis"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+execute:
+  keep-md: true
+  df-print: paged
+  warning: false
+format:
+  html:
+    code-fold: true
+    code-line-numbers: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(rhdf5)
+library(tximport) 
+library(ensembldb)
+library(biomaRt)
+library(edgeR)
+library(matrixStats)
+library(cowplot)
+library(DT)
+library(gt)
+library(plotly)
+library(limma)
+library(IsoformSwitchAnalyzeR)
+library(RColorBrewer)
+library(gplots)
+library(d3heatmap)
+library(GSEABase)
+library(Biobase) 
+library(gprofiler2) 
+library(clusterProfiler) 
+library(msigdbr) 
+library(enrichplot)
+library(EnsDb.Hsapiens.v86)
+library(GSVA)
+library(ggforce)
+```
+
+
+
+## Introduction 
+
+We will be analyzing Hereditary Hemorrhagic Telangiectasia Syndrome or HHT RNA-seq data. HHT patients develop arteriovenous malformations (AVMs) known as telangiectasia in the nose, mouth, and gastrointestinal tract. The telangiectasia are comprised of fragile vessels that are susceptible to rupture and hemorrhage, which can cause nosebleeds or more serious symptoms depending on the location. It is prevalent in one case per 5,000–8,000 individuals
+![](hht image.webp)   
+![](hht image2.jpg)
+We want to find which specific genes contribute to the development of HHT and what roles do they play? The following links are to the [research paper](https://www.biorxiv.org/content/10.1101/2021.12.05.471269v2.full) and the [dataset](https://zenodo.org/records/5201823) used in this analysis.
+
+This research project aims to improve the studying of rare diseases, such as hereditary hemorrhagic telangiectasia (HHT), using cells derived from patients. The researchers focused on understanding how cells respond to specific genetic mutations called premature termination codons (PTCs).
+
+The study involved obtaining blood outgrowth endothelial cells (BOECs) from two healthy patients (control group) and two pre-genotyped HHT patients (experimental group). 
+
+RNA was extracted from multiple samples of BOECs from both healthy and HHT patients. These cells were then grown under two different conditions: with and without a specific growth factor. In total, there were two control/healthy groups and six experimental/disease groups.
+
+
+### Load in the Data
+
+
+
+```{r, warning=FALSE, message=FALSE}
+targets <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\studydesign.csv")
+
+counts <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\Data.csv")
+
+Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("gene_id", "gene_name"))
+
+Tx <- as_tibble(Tx)
+
+Tx <- dplyr::rename(Tx, target_id = gene_id)
+
+Tx <- dplyr::select(Tx, "target_id", "gene_name")
+
+df <- left_join(counts, Tx, by = c("Ensembl Transcript ID" = "target_id"))
+
+distinct <- distinct(df)
+
+data <- distinct %>% 
+  group_by(gene_name)
+
+data <- data %>% 
+  mutate_all(funs(replace(., .==".", 0)))
+
+data$`hht 1.1` <- as.numeric(data$`hht 1.1`)
+data$`hht 1.2` <- as.numeric(data$`hht 1.2`)
+data$`hht 2.1` <- as.numeric(data$`hht 2.1`)
+data$`hht 2.2` <- as.numeric(data$`hht 2.2`)
+data$`hht 3.1` <- as.numeric(data$`hht 3.1`)
+data$`hht 3.2` <- as.numeric(data$`hht 3.2`)
+```
+
+
+
+## Data Wrangling
+
+
+
+```{r, warning=FALSE, message=FALSE}
+a <- data %>% 
+  select(-`Ensembl Transcript ID`)
+
+b <- a %>%
+  group_by(gene_name) %>%
+  summarise_if(is.numeric, sum, na.rm = TRUE)
+
+c <- as.data.frame(b)
+
+rownames(c) <- c$gene_name
+
+myDGEList <- DGEList(c)
+
+sampleLabels <- targets$sample
+
+log2.cpm <- cpm(myDGEList, log=TRUE)
+
+log2.cpm.df <- as_tibble(log2.cpm, rownames = "geneID")
+colnames(log2.cpm.df) <- c("geneID", sampleLabels)
+log2.cpm.df.pivot <- pivot_longer(log2.cpm.df, 
+                                  cols = -1,
+                                  names_to = "samples",
+                                  values_to = "expression")
+
+p1 <- ggplot(log2.cpm.df.pivot) +
+  aes(x=samples, y=expression, fill=samples) +
+  geom_violin(trim = FALSE, show.legend = FALSE) +
+  stat_summary(fun = "median", 
+               geom = "point", 
+               shape = 95, 
+               size = 10, 
+               color = "black", 
+               show.legend = FALSE) +
+  labs(y="log2 expression", x = "sample",
+       title="Log2 Counts per Million (CPM)",
+       subtitle="unfiltered, non-normalized") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust =1))
+
+
+cpm <- cpm(myDGEList)
+keepers <- rowSums(cpm>1)>=2
+myDGEList.filtered <- myDGEList[keepers,]
+
+log2.cpm.filtered <- cpm(myDGEList.filtered, log=TRUE)
+log2.cpm.filtered.df <- as_tibble(log2.cpm.filtered, rownames = "geneID")
+colnames(log2.cpm.filtered.df) <- c("geneID", sampleLabels)
+log2.cpm.filtered.df.pivot <- pivot_longer(log2.cpm.filtered.df,
+                                           cols = -1,
+                                           names_to = "samples",
+                                           values_to = "expression") 
+
+p2 <- ggplot(log2.cpm.filtered.df.pivot) +
+  aes(x=samples, y=expression, fill=samples) +
+  geom_violin(trim = FALSE, show.legend = FALSE) +
+  stat_summary(fun = "median", 
+               geom = "point", 
+               shape = 95, 
+               size = 10, 
+               color = "black", 
+               show.legend = FALSE) +
+  labs(y="log2 expression", x = "sample",
+       title="Log2 Counts per Million (CPM)",
+       subtitle="filtered, non-normalized") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust =1))
+
+
+myDGEList.filtered.norm <- calcNormFactors(myDGEList.filtered, method = "TMM")
+log2.cpm.filtered.norm <- cpm(myDGEList.filtered.norm, log=TRUE)
+log2.cpm.filtered.norm.df <- as_tibble(log2.cpm.filtered.norm, rownames = "geneID")
+colnames(log2.cpm.filtered.norm.df) <- c("geneID", sampleLabels)
+log2.cpm.filtered.norm.df.pivot <- pivot_longer(log2.cpm.filtered.norm.df,
+                                                cols = -1,
+                                                names_to = "samples",
+                                                values_to = "expression")
+
+p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
+  aes(x=samples, y=expression, fill=samples) +
+  geom_violin(trim = FALSE, show.legend = FALSE) +
+  stat_summary(fun = "median", 
+               geom = "point", 
+               shape = 95, 
+               size = 10, 
+               color = "black", 
+               show.legend = FALSE) +
+  labs(y="log2 expression", x = "sample",
+       title="Log2 Counts per Million (CPM)",
+       subtitle="filtered, TMM normalized") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust =1))
+
+plot_grid(p1, p2, p3, labels = c('A', 'B', 'C'), label_size = 12)
+```
+
+
+
+
+## Data Exploration 
+
+
+
+```{r, warning=FALSE, message=FALSE}
+group <- targets$group
+group <- factor(group)
+
+pca.res <- prcomp(t(log2.cpm.filtered.norm), scale.=F, retx=T)
+pc.var <- pca.res$sdev^2
+pc.per <- round(pc.var/sum(pc.var)*100, 1) 
+pca.res.df <- as_tibble(pca.res$x)
+pca.plot <- ggplot(pca.res.df) +
+  aes(x=PC1, y=PC2, label=sampleLabels, color = group) +
+  geom_point(size=4) +
+  stat_ellipse() +
+  xlab(paste0("PC1 (",pc.per[1],"%",")")) + 
+  ylab(paste0("PC2 (",pc.per[2],"%",")")) +
+  labs(title="PCA plot") +
+  coord_fixed() +
+  theme_bw()
+
+ggplotly(pca.plot)
+
+log2.cpm.filtered.norm.df <- log2.cpm.filtered.norm.df %>% 
+  rename(hht1_1 = `hht 1 .1`, hht1_2 = `hht 1.2`, hht2_1 = `hht 2.1`, hht2_2 = `hht 2.2`, hht3_1 = `hht 3.1`, hht3_2 = `hht 3.2`, control1 = `control 1`, control2 = `control 2`)
+
+mydata.df <- mutate(log2.cpm.filtered.norm.df,
+                    healthy.AVG = (control1 + control2)/2, 
+                    disease.AVG = (hht1_1 + hht1_2 + hht2_1 + hht2_2 + hht3_1 + hht3_2)/6,
+                    LogFC = (disease.AVG - healthy.AVG)) %>% 
+  mutate_if(is.numeric, round, 2)
+
+mydata.sort <- mydata.df %>%
+  dplyr::arrange(desc(LogFC)) %>% 
+  dplyr::select(geneID, LogFC)
+
+datatable(mydata.df[,c(1,10:12)], 
+          extensions = c('KeyTable', "FixedHeader"), 
+          filter = 'top',
+          options = list(keys = TRUE, 
+                        searchHighlight = TRUE, 
+                        pageLength = 10, 
+                         dom = "Blfrtip", 
+                         buttons = c("copy", "csv", "excel"),
+                         lengthMenu = c("10", "25", "50", "100")))
+
+distance <- dist(t(log2.cpm.filtered.norm), method = "maximum")
+clusters <- hclust(distance, method = "single")
+plot(clusters, labels=sampleLabels)
+
+pca.res <- prcomp(t(log2.cpm.filtered.norm), scale.=F, retx=T)
+#ls(pca.res)
+#summary(pca.res) 
+#pca.res$rotation 
+#pca.res$x
+screeplot(pca.res)
+text(x=0.7, y=1700, labels = "47.5%", cex=0.7)
+text(x=1.9, y=900, labels = "21.2%", cex=0.7)
+text(x=3.1, y=750, labels = "17.9%", cex=0.7)
+text(x=4.3, y=350, labels = "7.4%", cex=0.7)
+text(x=5.6, y=130, labels = "2.1%", cex=0.7)
+text(x=6.8, y=130, labels = "2.0%", cex=0.7)
+text(x=7.9, y=130, labels = "1.9%", cex=0.7)
+text(x=9.2, y=70, labels = "0.0%", cex=0.7)
+pc.var<-pca.res$sdev^2 
+pc.per<-round(pc.var/sum(pc.var)*100, 1) 
+#pc.per
+
+pca.res.df <- as_tibble(pca.res$x)
+ggplot(pca.res.df) +
+  aes(x=PC2, y=PC3, label=sampleLabels) +
+  geom_point(size=4) +
+  geom_label() +
+  stat_ellipse() +
+  xlab(paste0("PC2 (",pc.per[1],"%",")")) + 
+  ylab(paste0("PC3 (",pc.per[2],"%",")")) +
+  labs(title="PCA plot") +
+  coord_fixed() +
+  theme_bw()
+
+pca.res.df <- pca.res$x[,1:4] %>%
+  as_tibble() %>%
+  add_column(sample = sampleLabels,
+             group = group)
+
+pca.pivot <- pivot_longer(pca.res.df, 
+                          cols = PC1:PC4, 
+                          names_to = "PC", 
+                          values_to = "loadings")
+ggplot(pca.pivot) +
+  aes(x=sample, y=loadings, fill=group) + 
+  geom_bar(stat="identity") +
+  facet_wrap(~PC) +
+  labs(title="PCA 'small multiples' plot") +
+  theme_bw() +
+  coord_flip()
+
+mydata.df <- mutate(log2.cpm.filtered.norm.df,
+                    healthy.AVG = (control1 + control2)/2, 
+                    disease.AVG = (hht1_1 + hht1_2 + hht2_1 + hht2_2 + hht3_1 + hht3_2)/6,
+                    LogFC = (disease.AVG - healthy.AVG)) %>% 
+  mutate_if(is.numeric, round, 2)
+
+#mydata.sort <- mydata.df %>%
+  #dplyr::arrange(desc(LogFC)) %>% 
+  #dplyr::select(geneID, LogFC)
+
+#gt(mydata.sort)
+
+mydata.filter <- mydata.df %>% 
+  dplyr::filter(geneID == "SMAD4"|geneID == "ENG"|geneID == "ACVRL1"|geneID == "SMOC2") %>% 
+  dplyr::select(geneID, healthy.AVG, disease.AVG, LogFC) %>% 
+  dplyr::arrange((LogFC))
+
+#gt(mydata.filter)
+
+#myplot <- ggplot(mydata.df) + 
+  #aes(x=healthy.AVG, y=disease.AVG) +
+  #geom_point(shape=16, size=1) +
+  #ggtitle("disease vs. healthy") +
+  #theme_bw()
+
+#ggplotly(myplot)
+
+myplot <- ggplot(mydata.df) +
+  aes(x=healthy.AVG, y=disease.AVG, 
+     text = paste("Symbol:", geneID)) +
+  geom_point(shape=16, size=1) +
+  ggtitle("Disease vs. Healthy") +
+  theme_bw()
+  #annotate('text', x = 6, y = -4, label = 'SMAD4', size = 3, color = 'red') +
+  #annotate('text', x = 7, y = -3, label = 'ENG', size = 3, color = 'red') +
+  #annotate('text', x = 9, y = -4, label = 'ACVRL1', size = 3, color = 'red')
+#myplot
+myplotly <- ggplotly(myplot)
+
+myplot_plotly <- add_trace(myplotly, x = ~c(6, 9.3, 9.3, 6),  # x-coordinates of the circle
+  y = ~c(-4, -4, -2.5, -2.5),  # y-coordinates of the circle
+  fill = "none",  # fill the circle
+  mode = "lines")
+myplot_plotly
+```
+
+
+
+## Differential Gene Expression
+
+
+
+```{r, warning=FALSE, message=FALSE}
+group <- factor(targets$group)
+design <- model.matrix(~0 + group)
+colnames(design) <- levels(group)
+
+v.DEGList.filtered.norm <- voom(myDGEList.filtered.norm, design, plot = FALSE)
+fit <- lmFit(v.DEGList.filtered.norm, design)
+contrast.matrix <- makeContrasts(infection = disease - healthy,
+                                 levels=design)
+
+fits <- contrasts.fit(fit, contrast.matrix)
+ebFit <- eBayes(fits)
+myTopHits <- topTable(ebFit, adjust ="BH", coef=1, number=40000, sort.by="logFC")
+myTopHits.df <- myTopHits %>%
+  as_tibble(rownames = "geneID")
+
+vplot <- ggplot(myTopHits.df) +
+  aes(y=-log10(adj.P.Val), x=logFC, text = paste("Symbol:", geneID)) +
+  geom_point(size=2) +
+  geom_hline(yintercept = -log10(0.01), linetype="longdash", colour="grey", linewidth=1) +
+  geom_vline(xintercept = 1, linetype="longdash", colour="#BE684D", linewidth=1) +
+  geom_vline(xintercept = -1, linetype="longdash", colour="#2C467A", linewidth=1) +
+  annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
+  annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
+  labs(title="Volcano plot") +
+  theme_bw()
+
+ggplotly(vplot)
+
+vplot <- ggplot(myTopHits.df) +
+  aes(y=-log10(adj.P.Val), x=logFC, text = paste("Symbol:", geneID)) +
+  geom_point(size=2) +
+  geom_hline(yintercept = -log10(0.01), linetype="longdash", colour="grey", linewidth=1) +
+  geom_vline(xintercept = 1, linetype="longdash", colour="#BE684D", linewidth=1) +
+  geom_vline(xintercept = -1, linetype="longdash", colour="#2C467A", linewidth=1) +
+  #annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
+  #annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
+  labs(title="Volcano plot") +
+  theme_bw()
+
+ggplotly(vplot)
+```
+
+```{r, warning=FALSE, message=FALSE}
+results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.05, lfc=1)
+colnames(v.DEGList.filtered.norm$E) <- sampleLabels
+diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
+diffGenes.df <- as_tibble(diffGenes, rownames = "geneID")
+#datatable(diffGenes.df,
+          #extensions = c('KeyTable', "FixedHeader"),
+          #caption = 'Table 1: DEGs in hereditary hemorrhagic telangiectasia',
+          #options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
+  #formatRound(columns=c(2:11), digits=2)
+
+group <- factor(targets$group)
+design <- model.matrix(~0 + group)
+colnames(design) <- levels(group)
+
+v.DEGList.filtered.norm <- voom(myDGEList.filtered.norm, design, plot = TRUE)
+
+fit <- lmFit(v.DEGList.filtered.norm, design)
+
+contrast.matrix <- makeContrasts(infection = disease - healthy,
+                                 levels=design)
+
+fits <- contrasts.fit(fit, contrast.matrix)
+
+ebFit <- eBayes(fits)
+
+myTopHits <- topTable(ebFit, adjust ="BH", coef=1, number=1000, sort.by="P")
+
+myTopHits.df <- myTopHits %>%
+  as_tibble(rownames = "geneID")
+
+#gt(myTopHits.df)
+
+results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01, lfc=1)
+
+#head(results)
+summary(results)
+
+vennDiagram(results, include="up")
+
+head(v.DEGList.filtered.norm$E)
+colnames(v.DEGList.filtered.norm$E) <- sampleLabels
+
+diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
+head(diffGenes)
+dim(diffGenes)
+
+diffGenes.df <- as_tibble(diffGenes, rownames = "geneID")
+
+datatable(diffGenes.df,
+          extensions = c('KeyTable', "FixedHeader"),
+          caption = 'Table 1: DEGs in hereditary hemorrhagic telangiectasia',
+          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
+  formatRound(columns=c(2:11), digits=2)
+
+write_tsv(diffGenes.df,"DiffGenes.txt")
+
+targets.mod <- targets %>%
+  dplyr::rename(sampleID = sample, condition = group) %>%
+  dplyr::select(sampleID, condition)
+```
+
+
+
+
+## Module Identification
+
+
+
+```{r, warning=FALSE, message=FALSE}
+myheatcolors <- rev(brewer.pal(name="RdBu", n=11))
+myotherheatcolors <- rev(brewer.pal(name="Spectral", n=11))
+clustRows <- hclust(as.dist(1-cor(t(diffGenes), method="pearson")), method="complete") 
+clustColumns <- hclust(as.dist(1-cor(diffGenes, method="spearman")), method="complete")
+module.assign <- cutree(clustRows, k=2)
+module.color <- rainbow(length(unique(module.assign)), start=0.1, end=0.9) 
+module.color <- module.color[as.vector(module.assign)] 
+heatmap.2(diffGenes, 
+          Rowv=as.dendrogram(clustRows), 
+          Colv=as.dendrogram(clustColumns),
+          RowSideColors=module.color,
+          col=myotherheatcolors, scale='row', labRow=NA,
+          density.info="none", trace="none",  
+          cexRow=1, cexCol=1, margins=c(8,20))
+
+modulePick <- 2 
+myModule_up <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
+hrsub_up <- hclust(as.dist(1-cor(t(myModule_up), method="pearson")), method="complete") 
+
+heatmap.2(myModule_up, 
+          Rowv=as.dendrogram(hrsub_up), 
+          Colv=NA, 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
+
+modulePick <- 1 
+myModule_down <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
+hrsub_down <- hclust(as.dist(1-cor(t(myModule_down), method="pearson")), method="complete") 
+
+heatmap.2(myModule_down, 
+          Rowv=as.dendrogram(hrsub_down), 
+          Colv=NA, 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
+
+myheatcolors1 <- bluered(75) 
+myheatcolors2 <- colorRampPalette(colors=c("blue","white","red"))(100)
+myheatcolors3 <- brewer.pal(name="RdBu", n=11)
+myheatcolors3 <- c("#fed976", "#268f9c")
+
+results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01, lfc=1)
+colnames(v.DEGList.filtered.norm$E) <- sampleLabels
+diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
+#dim(diffGenes)
+clustRows <- hclust(as.dist(1-cor(t(diffGenes), method="pearson")), method="complete") 
+clustColumns <- hclust(as.dist(1-cor(diffGenes, method="spearman")), method="complete") 
+module.assign <- cutree(clustRows, k=2)
+module.color <- rainbow(length(unique(module.assign)), start=0.1, end=0.9) 
+module.color <- module.color[as.vector(module.assign)] 
+heatmap.2(diffGenes, 
+          Rowv=as.dendrogram(clustRows), 
+          Colv=as.dendrogram(clustColumns),
+          RowSideColors=module.color,
+          col=rev(myheatcolors1), scale='row', labRow=NA,
+          density.info="none", trace="none",  
+          cexRow=1, cexCol=1, margins=c(8,20)) 
+
+d3heatmap(diffGenes,
+          colors = myheatcolors1,
+          Rowv=as.dendrogram(clustRows),
+          row_side_colors = module.color,
+          scale='row')
+
+colnames(diffGenes) <- targets$group
+
+diffGenes.AVG <- avearrays(diffGenes)
+
+names(module.color) <- names(module.assign) 
+
+module.assign.df <- as_tibble(as.list(module.assign))
+module.assign.pivot <- pivot_longer(module.assign.df, 
+                                    cols = everything(), 
+                                    names_to = "geneID", 
+                                    values_to = "module")
+
+module.assign.pivot <- module.assign.pivot %>%
+  mutate(moduleColor = case_when(
+    module == 1 ~ "#FF9900",
+    module == 2 ~ "#FF0099"))
+
+ggplot(module.assign.pivot) +
+  aes(module) +
+  geom_bar(aes(fill=moduleColor)) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+modulePick <- 2
+myModule <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
+hrsub <- hclust(as.dist(1-cor(t(myModule), method="pearson")), method="complete") 
+
+heatmap.2(myModule, 
+          Rowv=as.dendrogram(hrsub), 
+          Colv=NA, 
+          labRow = NA,
+          col=rev(myheatcolors1), scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20)) 
+
+moduleSymbols <- tibble(geneID = rev(hrsub$labels[hrsub$order]))
+moduleData <- diffGenes[moduleSymbols$geneID,]
+moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol")
+write_tsv(moduleData.df,"module_upRegulated.tsv")
+```
+
+
+
+## Functional Enrichment Analysis
+
+
+
+```{r, warning=FALSE, message=FALSE}
+myTopHits <- topTable(ebFit, adjust ="BH", coef=1, number=100, sort.by="AveExpr")
+
+gost.res <- gost(rownames(myTopHits), organism = "hsapiens", correction_method = "fdr")
+
+gostplot(gost.res, interactive = TRUE, capped = TRUE)
+
+mygostplot <- gostplot(gost.res, interactive = FALSE, capped = TRUE)
+
+#publish_gostplot(
+  #mygostplot, 
+  #highlight_terms = c("REAC:R-HSA-9662851", "REAC:R-HSA-9824443", "REAC:R-HSA-9664407", "REAC:R-HSA-9658195", "REAC:R-HSA-9664417"),
+  #filename = NULL,
+  #width = NA,
+  #height = NA)
+
+C2CP <- read.gmt("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\c2.all.v2023.2.Hs.symbols.gmt")
+
+mydata.df.sub <- dplyr::select(mydata.df, geneID, LogFC)
+
+mydata.gsea <- mydata.df.sub$LogFC
+names(mydata.gsea) <- as.character(mydata.df.sub$geneID)
+mydata.gsea <- sort(mydata.gsea, decreasing = TRUE)
+
+set.seed(123) 
+myGSEA.res <- GSEA(mydata.gsea, TERM2GENE=C2CP, verbose=FALSE) 
+myGSEA.df <- as_tibble(myGSEA.res@result)
+
+datatable(myGSEA.df,
+          extensions = c('KeyTable', "FixedHeader"),
+          caption = 'Signatures enriched in leishmaniasis',
+          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
+  formatRound(columns=c(2:10), digits=2)
+
+gseaplot2(myGSEA.res,
+          geneSetID = c(1, 2, 3), 
+          pvalue_table = FALSE, 
+          
+)
+
+myGSEA.df <- myGSEA.df %>%
+  mutate(phenotype = case_when(
+    NES > 0 ~ "disease",
+    NES < 0 ~ "healthy"))
+
+ggplot(myGSEA.df[1:20,], aes(x=phenotype, y=ID)) +
+  geom_point(aes(size=setSize, color = NES, alpha=-log10(p.adjust))) +
+  scale_color_gradient(low="blue", high="red") +
+  theme_bw()
+
+mySig <- rownames(myTopHits) 
+mySig2 <- sample((rownames(v.DEGList.filtered.norm$E)), size = 50, replace = FALSE)
+collection <- list(real = mySig, fake = mySig2)
+
+camera.res <- camera(v.DEGList.filtered.norm$E, collection, design, contrast.matrix[,1])
+camera.df <- as_tibble(camera.res, rownames = "setName")
+#camera.df
+
+mroast(v.DEGList.filtered.norm$E, collection, design, contrast=1)
+
+C2CP <- getGmt("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\c2.all.v2023.2.Hs.symbols.gmt", geneIdType=SymbolIdentifier())
+
+C2CP <- geneIds(C2CP)
+camera.res <- camera(v.DEGList.filtered.norm$E, C2CP, design, contrast.matrix[,1])
+camera.df <- as_tibble(camera.res, rownames = "setName")
+camera.df
+
+camera.df <- dplyr::filter(camera.df, FDR<=0.01)
+
+datatable(camera.df,
+          extensions = c('KeyTable', "FixedHeader"),
+          caption = 'Signatures enriched in HHT',
+          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
+  formatRound(columns=c(2,4,5), digits=2)
+
+camera.df <- camera.df %>%
+  mutate(phenotype = case_when(
+    Direction == "Up" ~ "disease",
+    Direction == "Down" ~ "healthy"))
+
+ggplot(camera.df[1:25,], aes(x=phenotype, y=setName)) +
+  geom_point(aes(size=NGenes, color = Direction, alpha=-log10(FDR))) +
+  theme_bw()
+
+gsvapar <- gsvaParam(exprData = v.DEGList.filtered.norm$E,
+                     geneSets = C2CP,
+                     minSize=5, maxSize=500,
+                     maxDiff=TRUE)
+
+#GSVA.res.C2CP <- gsva(gsvapar)
+
+#fit.C2CP <- lmFit(GSVA.res.C2CP, design)
+#ebFit.C2CP <- eBayes(fit.C2CP)
+
+#topPaths.C2CP <- topTable(ebFit.C2CP, adjust ="BH", coef=1, number=50, sort.by="logFC")
+#res.C2CP <- decideTests(ebFit.C2CP, method="global", adjust.method="BH", p.value=0.05, lfc=0.5)
+
+#summary(res.C2CP)
+
+#diffSets.C2CP <- GSVA.res.C2CP[res.C2CP[,1] !=0,]
+#head(diffSets.C2CP)
+#dim(diffSets.C2CP)
+
+#hr.C2CP <- hclust(as.dist(1-cor(t(diffSets.C2CP), method="pearson")), method="complete") 
+#hc.C2CP <- hclust(as.dist(1-cor(diffSets.C2CP, method="spearman")), method="complete") 
+
+#mycl.C2CP <- cutree(hr.C2CP, k=2)
+#mycolhc.C2CP <- rainbow(length(unique(mycl.C2CP)), start=0.1, end=0.9)
+#mycolhc.C2CP <- mycolhc.C2CP[as.vector(mycl.C2CP)]
+
+#myheatcol <- colorRampPalette(colors=c("yellow","white","blue"))(100)
+
+#heatmap.2(diffSets.C2CP,
+          #Rowv=as.dendrogram(hr.C2CP),
+          #Colv=NA,
+          #col=myheatcol, scale="row",
+          #density.info="none", trace="none",
+          #cexRow=0.9, cexCol=1, margins=c(10,14))
+```
+
+
+
+## Findings 
+
+In our research, we discovered that SMAD4, ENG, and ACVRL1 are the genes that exhibit the most variation in their number of transcriptions between healthy patients and patients with HHT. Further investigation revealed that these three genes are part of a single pathway known as the transforming growth factor beta (TGF-β) signaling pathway. Initially thought to promote cell growth like other growth factors, it was later understood that the transforming growth factor serves as a dual-purpose regulator that can either impede or promote cell proliferation (growth and division).
+
+![](HHT 3.png)
+
+### SMAD4
+
+The human SMAD4 (MADH4) plays a key role in transmitting signals from the TGF-beta group of cytokines. When components of the Smad signaling pathway are mutated or deleted, certain human tumors can resist the growth-suppressing signals of TGF-beta or similar substances.
+
+### ENG
+
+ENG, also known as endoglin, is expressed in blood vessels and plays key roles in cell proliferation, migration, and capillary formation.
+
+### ACVRL1
+
+ACVRL1 is responsible for producing a type I cell-surface receptor that interacts with the TGF-beta superfamily of ligands. Through the signaling receptor ACVRL1, ENG can promote the TGFβ family signaling.
+
+## Conclusion 
+
+According to the analysis of this RNA sequence, it is evident that alterations in the transcription levels of SMAD4, endoglin, and ACVRL1 may lead to abnormalities in blood vessel formation in the human body, increasing the susceptibility to hemorrhag since  these three genes are primarily involved in cell proliferation, especially in endothelial cells.
+
+
+### References 
+
+Rossi, Elisa, et al. “Endoglin as an Adhesion Molecule in Mature and Progenitor Endothelial Cells: A Function beyond TGF-β.” Frontiers, Frontiers, 14 Jan. 2019, www.frontiersin.org/articles/10.3389/fmed.2019.00010/full.
+
+Gariballa, N., Badawi, S., & Ali, B. R. (2024). Endoglin mutants retained in the endoplasmic reticulum exacerbate loss of function in hereditary hemorrhagic telangiectasia type 1 (HHT1) by exerting dominant negative effects on the wild type allele. Traffic, 25(1). https://doi.org/10.1111/tra.12928 
+Jones, J. B., & Kern, S. E. (2000). Functional mapping of the MH1 DNA-binding domain of DPC4/SMAD4. Nucleic acids research, 28(12), 2363–2368. https://doi.org/10.1093/nar/28.12.2363
+
+de Caestecker, M. P., Hemmati, P., Larisch-Bloch, S., Ajmera, R., Roberts, A. B., & Lechleider, R. J. (1997). Characterization of functional domains within Smad4/DPC4. The Journal of biological chemistry, 272(21), 13690–13696. https://doi.org/10.1074/jbc.272.21.13690
+
+Wan, R., Feng, J., & Tang, L. (2021). Consequences of Mutations and Abnormal Expression of SMAD4 in Tumors and T Cells. OncoTargets and therapy, 14, 2531–2540. https://doi.org/10.2147/OTT.S297855
+
+Kuang, C., & Chen, Y. (2004). Tumor-derived C-terminal mutations of Smad4 with decreased DNA binding activity and enhanced intramolecular interaction. Oncogene, 23(5), 1021–1029. https://doi.org/10.1038/sj.onc.1207219
+
+Shovlin, C. L., Hughes, J. M. B., Scott, J., Seidman, C. E., & Seidman, J. G. (1997). Characterization of endoglin and identification of novel mutations in Hereditary hemorrhagic telangiectasia. The American Journal of Human Genetics, 61(1), 68–79. https://doi.org/10.1086/513906 
+
+Zhao, M., Mishra, L., Deng, C.X. (2018). The role of TGF-β/SMAD4 signaling in cancer. International Journal of Biological Sciences, 14(2), 111-123. https://doi.org/10.7150/ijbs.23230.
+
+Errasti Díaz, S., Peñalva, M., Recio-Poveda, L., Vilches, S., Casado-Vela, J., Pérez Pérez, J., Botella, L. M., Albiñana, V., & Cuesta, A. M. (2022). A Novel Splicing Mutation in the ACVRL1/ALK1 Gene as a Cause of HHT2. Journal of clinical medicine, 11(11), 3053. https://doi.org/10.3390/jcm11113053
+
+Kritharis, Athena, Hanny Al-Samkari, and David J. Kuter. "Hereditary hemorrhagic telangiectasia: diagnosis and management from the hematologist’s perspective." Haematologica 103.9 (2018): 1433.
+
+Chaudhury, A., & Howe, P. H. (2009). The tale of transforming growth factor-beta (TGFbeta) signaling: a soigné enigma. IUBMB life, 61(10), 929–939. https://doi.org/10.1002/iub.239
+
+Chin, D., Boyle, G. M., Parsons, P. G., & Coman, W. B. (2004). What is transforming growth factor-beta (TGF-beta)?. British journal of plastic surgery, 57(3), 215–221. https://doi.org/10.1016/j.bjps.2003.12.012
+
+
+
