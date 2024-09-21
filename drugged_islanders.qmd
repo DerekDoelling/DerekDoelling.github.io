@@ -256,7 +256,7 @@ scale_fill_manual(values = c('Drug' = '#5f9ebc', 'Placebo' = 'grey')) +
     axis.text.y = element_blank()
   ) +
   annotate('text', x = Inf, y = Inf, label = '0', size = 4, color = 'grey', hjust=44, vjust=29) +
-  annotate('text', x = Inf, y = Inf, label = '2', size = 4, color = 'black', hjust=53, vjust=20) +
+  annotate('text', x = Inf, y = Inf, label = '2', size = 4, color = 'black', hjust=53, vjust=17.5) +
   annotate('text', x = Inf, y = Inf, label = '4', size = 4, color = 'black', hjust=24, vjust=4) +
   annotate('text', x = Inf, y = Inf, label = '2', size = 4, color = 'black', hjust=11, vjust=17.5)
 ```
