@@ -57,10 +57,10 @@ website:
         - text: "Data Exploration"
           file: dataexploration.qmd
         - text: "---"
-        - text: "Project 1"
+        - text: "RNA Seq Analysis"
           file: Cleansing_Exploration/rnaseq.qmd
         - text: "---"
-        - text: "Project 2"
+        - text: "IBC"
           file: Cleansing_Exploration/IBCspring.qmd
         - text: "---"
     - title: "Story Telling"
