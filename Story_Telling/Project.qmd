@@ -27,7 +27,7 @@ My initial career aspiration was to become a pharmacist, and I pursued a major i
 The original dataset contained nine columns: Medicine Name (string), Composition (string), Uses (string), Side Effects (string), Image Url (string), Manufacturer (string), Excellent Review (numeric), Average Review (numeric), and Poor Review (numeric). After putting in a lot of effort, I managed to create useful charts from the data.
 
 ```{r}
-drugs <- read_csv("C:\\Users\\derek\\OneDrive - BYU-Idaho\\Documents\\DS 350\\DS350_SP24_Doelling_Dere\\week_14\\medicine info.csv")
+drugs <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\medicine info.csv")
 ```
 
 ```{r}

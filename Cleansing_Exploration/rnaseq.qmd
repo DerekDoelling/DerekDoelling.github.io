@@ -55,9 +55,9 @@ RNA was extracted from multiple samples of BOECs from both healthy and HHT patie
 ### Load in the Data
 
 ```{r, warning=FALSE, message=FALSE}
-targets <- read_csv("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/studydesign.csv")
+targets <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\studydesign.csv")
 
-counts <- read_csv("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/Data.csv")
+counts <- read_csv("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\Data.csv")
 
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("gene_id", "gene_name"))
 
@@ -561,7 +561,7 @@ mygostplot <- gostplot(gost.res, interactive = FALSE, capped = TRUE)
   #width = NA,
   #height = NA)
 
-C2CP <- read.gmt("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/c2.all.v2023.2.Hs.symbols.gmt")
+C2CP <- read.gmt("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\c2.all.v2023.2.Hs.symbols.gmt")
 
 mydata.df.sub <- dplyr::select(mydata.df, geneID, LogFC)
 
@@ -605,7 +605,7 @@ camera.df <- as_tibble(camera.res, rownames = "setName")
 
 mroast(v.DEGList.filtered.norm$E, collection, design, contrast=1)
 
-C2CP <- getGmt("https://raw.githubusercontent.com/DerekDoelling/DerekDoelling.github.io/main/c2.all.v2023.2.Hs.symbols.gmt", geneIdType=SymbolIdentifier())
+C2CP <- getGmt("C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\c2.all.v2023.2.Hs.symbols.gmt", geneIdType=SymbolIdentifier())
 
 C2CP <- geneIds(C2CP)
 camera.res <- camera(v.DEGList.filtered.norm$E, C2CP, design, contrast.matrix[,1])
