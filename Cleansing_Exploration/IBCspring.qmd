@@ -14,6 +14,14 @@ editor_options:
 ---
 
 ```{r}
+install.packages("tidyverse")
+install.packages("directlabels")
+install.packages("ggrepel")
+install.packages("gapminder")
+install.packages("ggthemes")
+install.packages("scales")
+install.packages("plotly")
+install.packages("pander")
 library(tidyverse)
 library(directlabels)
 library(ggrepel)

@@ -14,12 +14,14 @@ editor_options:
   chunk_output_type: console
 ---
 ```{r}
+install.packages("tidyverse")
+install.packages("formattable")
 library(tidyverse)
 library(formattable)
 ```
 
 ```{r}
-df <- read_csv('C:\\Users\\derek\\OneDrive - BYU-Idaho\\Documents\\Linkedin Learning\\Islander_data.csv')
+df <- read_csv('C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\Islander_data.csv')
 ```
 
 ```{r}
