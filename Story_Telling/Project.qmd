@@ -14,11 +14,6 @@ editor_options:
 ---
 
 ```{r}
-install.packages("tidyverse")
-install.packages("dplyr")
-install.packages("stringr")
-install.packages("plotly")
-install.packages("RColorBrewer")
 library(tidyverse)
 library(dplyr)
 library(stringr)

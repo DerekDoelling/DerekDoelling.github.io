@@ -18,6 +18,7 @@ editor_options:
 ::: {.cell}
 
 ```{.r .cell-code}
+library(rmarkdown)
 library(tidyverse)
 library(formattable)
 ```
@@ -26,7 +27,7 @@ library(formattable)
 ::: {.cell}
 
 ```{.r .cell-code}
-df <- read_csv('C:\\Users\\derek\\OneDrive - BYU-Idaho\\Documents\\Linkedin Learning\\Islander_data.csv')
+df <- read_csv('C:\\Users\\derek\\OneDrive\\Documents\\DerekDoelling.github.io\\Islander_data.csv')
 ```
 :::
 

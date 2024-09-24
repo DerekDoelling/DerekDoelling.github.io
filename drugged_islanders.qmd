@@ -14,8 +14,7 @@ editor_options:
   chunk_output_type: console
 ---
 ```{r}
-install.packages("tidyverse")
-install.packages("formattable")
+library(rmarkdown)
 library(tidyverse)
 library(formattable)
 ```
