@@ -40,6 +40,9 @@ jobs:
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: 
+            any::languageserver
+            any::rmarkdown
+            any::languageserversetup
             any::tidyverse
             any::knitr
             any::DT
@@ -77,7 +80,6 @@ jobs:
             any::EnsDb.Hsapiens.v86
             any::GSVA
             any::ggforce
-
 
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2
