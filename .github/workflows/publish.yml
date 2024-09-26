@@ -44,6 +44,40 @@ jobs:
             any::knitr
             any::DT
             any::formattable
+            any::directlabels
+            any::ggrepel
+            any::gapminder
+            any::ggthemes
+            any::scales
+            any::plotly
+            any::pander
+            any::tidyverse
+            any::dplyr
+            any::stringr
+            any::RColorBrewer
+            any::rhdf5
+            any::tximport
+            any::ensembldb
+            any::biomaRt
+            any::edgeR
+            any::matrixStats
+            any::cowplot
+            any::DT
+            any::gt
+            any::limma
+            any::IsoformSwitchAnalyzeR
+            any::gplots
+            any::d3heatmap
+            any::GSEABase
+            any::Biobase
+            any::gprofiler2
+            any::clusterProfiler
+            any::msigdbr
+            any::enrichplot
+            any::EnsDb.Hsapiens.v86
+            any::GSVA
+            any::ggforce
+
 
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2
